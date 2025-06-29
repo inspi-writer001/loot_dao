@@ -42,9 +42,11 @@ contract NFTGovernor is
     Pausable
 {
     // Security constants - adjusted for NFT governance
-    uint48 public constant MIN_VOTING_DELAY = 1 days;
+    //TODO uint48 public constant MIN_VOTING_DELAY = 1 days;
+    uint48 public constant MIN_VOTING_DELAY = 1 minutes;
     uint48 public constant MAX_VOTING_DELAY = 30 days;
-    uint32 public constant MIN_VOTING_PERIOD = 3 days;
+    //TODO uint32 public constant MIN_VOTING_PERIOD = 3 days;
+    uint32 public constant MIN_VOTING_PERIOD = 1 minutes;
     uint32 public constant MAX_VOTING_PERIOD = 60 days;
     uint256 public constant MIN_PROPOSAL_THRESHOLD = 1; // 1 NFT minimum
     uint256 public constant MAX_PROPOSAL_THRESHOLD = 100; // 100 NFTs max (reasonable for NFT collections)
@@ -117,6 +119,11 @@ contract NFTGovernor is
             "Invalid extension period"
         );
 
+        require(_proposalThreshold == 16, "Must match 16 NFT threshold");
+        require(_quorumNumeratorValue == 4, "Must match 4% quorum");
+        // require(_votingDelay == 26280, "Must match ~4.48 day delay");
+        // require(_votingPeriod == 39420, "Must match ~6.84 day period");
+
         nftToken = _nftToken;
     }
 
@@ -127,7 +134,10 @@ contract NFTGovernor is
      */
     function getTotalNFTSupply() public view returns (uint256) {
         // Use getPastTotalSupply from ERC721Votes
-        return nftToken.getPastTotalSupply(block.number - 1);
+        return
+            block.number > 0
+                ? nftToken.getPastTotalSupply(block.number - 1)
+                : nftToken.getPastTotalSupply(0);
     }
 
     /**
@@ -281,10 +291,31 @@ contract NFTGovernor is
         string memory description
     ) public override whenNotPaused nonReentrant returns (uint256) {
         // Additional check: ensure proposer has delegated their NFTs to themselves
-        require(
-            getCurrentNFTVotingPower(_msgSender()) >= proposalThreshold(),
-            "Insufficient NFT voting power"
-        );
+        // require(
+        //     nftToken.getPastVotes(
+        //         _msgSender(),
+        //         block.number > 0 ? block.number - 1 : 0
+        //     ) >= proposalThreshold(),
+        //     "Insufficient historical NFT voting power"
+        // );
+        uint256 snapshotBlock;
+
+        if (block.number == 0) {
+            // At genesis block, use current votes
+            require(
+                nftToken.getVotes(_msgSender()) >= proposalThreshold(),
+                "Insufficient NFT voting power at genesis"
+            );
+            snapshotBlock = 0;
+        } else {
+            // Use historical votes from previous block
+            snapshotBlock = block.number - 1;
+            require(
+                nftToken.getPastVotes(_msgSender(), snapshotBlock) >=
+                    proposalThreshold(),
+                "Insufficient historical NFT voting power"
+            );
+        }
         return super.propose(targets, values, calldatas, description);
     }
 
@@ -326,14 +357,14 @@ contract NFTGovernor is
      * @dev TALLY COMPATIBILITY: New signature castVoteBySig function
      * This is what Tally.xyz expects in newer versions
      */
-    function castVoteBySig(
-        uint256 proposalId,
-        uint8 support,
-        address voter,
-        bytes memory signature
-    ) public override whenNotPaused nonReentrant returns (uint256) {
-        return super.castVoteBySig(proposalId, support, voter, signature);
-    }
+    // function castVoteBySig(
+    //     uint256 proposalId,
+    //     uint8 support,
+    //     address voter,
+    //     bytes memory signature
+    // ) public override whenNotPaused nonReentrant returns (uint256) {
+    //     return super.castVoteBySig(proposalId, support, voter, signature);
+    // }
 
     /**
      * @dev LEGACY COMPATIBILITY: Old signature castVoteBySig function
