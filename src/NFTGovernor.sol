@@ -44,7 +44,7 @@ contract NFTGovernor is
     // Security constants - adjusted for NFT governance
     //TODO uint48 public constant MIN_VOTING_DELAY = 1 days;
     uint48 public constant MIN_VOTING_DELAY = 1 minutes;
-    uint48 public constant MAX_VOTING_DELAY = 30 days;
+    uint48 public constant MAX_VOTING_DELAY = 20 days;
     //TODO uint32 public constant MIN_VOTING_PERIOD = 3 days;
     uint32 public constant MIN_VOTING_PERIOD = 1 minutes;
     uint32 public constant MAX_VOTING_PERIOD = 60 days;
